@@ -1,173 +1,368 @@
-'use client';
-
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Leaf, Recycle, Trophy, Droplet, Sprout, Sun, ShoppingBag } from 'lucide-react';
+import { Leaf, Search, ShoppingCart, Star, Filter, ChevronDown, Menu, X } from 'lucide-react';
 
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 }
-};
-
-const Page = () => {
+export default function RewardsPage() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [selectedReward, setSelectedReward] = useState("");
+  const [selectedReward, setSelectedReward] = useState(null);
+  const [userPoints, setUserPoints] = useState(2000);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [cartItems, setCartItems] = useState([]);
+  const [showCart, setShowCart] = useState(false);
+  const [filteredRewards, setFilteredRewards] = useState([]);
 
-  const rewards = [
+  const categories = [
+    "All Categories",
+    "Electronics",
+    "Home & Kitchen",
+    "Fashion",
+    "Sports",
+    "Books",
+    "Beauty",
+  ];
+
+  const allRewards = [
     {
       id: 1,
-      name: "Eco-Friendly Earbuds",
+      name: "Premium Wireless Earbuds",
       points: 100,
-      description: "Made from recycled materials with sustainable packaging",
-      icon: <Leaf className="h-12 w-12 text-green-600" />,
-      stats: "Saved 2kg plastic waste"
+      originalPoints: 150,
+      description: "High-quality sound with active noise cancellation",
+      category: "Electronics",
+      rating: 4.5,
+      reviews: 128,
+      image: "https://m.media-amazon.com/images/I/713Lr2oNWaL._SX522_.jpg",
+      inStock: true,
+      delivery: "Delivery by Tomorrow"
     },
     {
       id: 2,
-      name: "Green Discount Coupon",
-      points: 10,
-      description: "10% off on eco-friendly products",
-      icon: <Recycle className="h-12 w-12 text-green-600" />,
-      stats: "Promotes sustainable shopping"
+      name: "Smart Fitness Band",
+      points: 300,
+      originalPoints: 400,
+      description: "Track your health and fitness goals",
+      category: "Electronics",
+      rating: 4.2,
+      reviews: 256,
+      image: "https://m.media-amazon.com/images/I/51iMzWsqrBL._SX679_.jpg",
+      inStock: true,
+      delivery: "Delivery in 2 days"
     },
     {
       id: 3,
-      name: "Reusable Water Bottle",
-      points: 50,
-      description: "Premium stainless steel bottle, reducing single-use plastic",
-      icon: <Droplet className="h-12 w-12 text-green-600" />,
-      stats: "Prevents 300+ plastic bottles annually"
+      name: "Coffee Maker",
+      points: 500,
+      originalPoints: 600,
+      description: "Premium coffee machine for perfect brews",
+      category: "Home & Kitchen",
+      rating: 4.7,
+      reviews: 89,
+      image: "https://m.media-amazon.com/images/I/41Hq2E2stgL._SX300_SY300_QL70_FMwebp_.jpg",
+      inStock: true,
+      delivery: "Delivery by Tomorrow"
     },
     {
       id: 4,
-      name: "Composting Starter Kit",
-      points: 75,
-      description: "Complete kit to start your home composting journey",
-      icon: <Sprout className="h-12 w-12 text-green-600" />,
-      stats: "Reduces 200kg yearly food waste"
+      name: "Running Shoes",
+      points: 200,
+      originalPoints: 250,
+      description: "Professional running shoes with comfort fit",
+      category: "Sports",
+      rating: 4.3,
+      reviews: 167,
+      image: "https://m.media-amazon.com/images/I/71DHKbJfG0L._SY695_.jpg",
+      inStock: true,
+      delivery: "Delivery in 3 days"
     },
     {
       id: 5,
-      name: "Solar-Powered Charger",
-      points: 120,
-      description: "Charge your devices using clean solar energy",
-      icon: <Sun className="h-12 w-12 text-green-600" />,
-      stats: "Saves 50kg CO2 emissions yearly"
+      name: "Fashion Book Collection",
+      points: 150,
+      originalPoints: 200,
+      description: "Curated collection of fashion design books",
+      category: "Books",
+      rating: 4.4,
+      reviews: 342,
+      image: "https://m.media-amazon.com/images/I/51d8s6ptnXL._SX342_SY445_.jpg",
+      inStock: true,
+      delivery: "Express Delivery Available"
     },
     {
       id: 6,
-      name: "Zero-Waste Shopping Kit",
-      points: 85,
-      description: "Includes mesh bags, jars, and produce bags",
-      icon: <ShoppingBag className="h-12 w-12 text-green-600" />,
-      stats: "Eliminates 100+ plastic bags monthly"
+      name: "Skincare Set",
+      points: 180,
+      originalPoints: 220,
+      description: "Premium skincare collection",
+      category: "Beauty",
+      rating: 4.6,
+      reviews: 95,
+      image: "https://m.media-amazon.com/images/I/610BrrtNXaL._SX522_PIbundle-4,TopRight,0,0_AA522SH20_.jpg",
+      delivery: "Delivery in 2-3 days"
     }
   ];
 
-  const handleClaim = (rewardName: string) => {
-    setSelectedReward(rewardName);
-    setShowSuccessDialog(true);
+  // Filter and search functionality
+  useEffect(() => {
+    let results = allRewards;
+    
+    // Apply category filter
+    if (selectedCategory !== 'All Categories') {
+      results = results.filter(reward => reward.category === selectedCategory);
+    }
+    
+    // Apply search filter
+    if (searchQuery) {
+      results = results.filter(reward => 
+        reward.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        reward.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        reward.category.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    setFilteredRewards(results);
+  }, [selectedCategory, searchQuery]);
+
+  // Cart functionality
+  const addToCart = (reward) => {
+    if (userPoints >= reward.points) {
+      setCartItems([...cartItems, reward]);
+      setUserPoints(userPoints - reward.points);
+    }
   };
 
+  const removeFromCart = (rewardId) => {
+    const reward = cartItems.find(item => item.id === rewardId);
+    setCartItems(cartItems.filter(item => item.id !== rewardId));
+    setUserPoints(userPoints + reward.points);
+  };
+
+  // Cart Sidebar Component
+  const CartSidebar = () => (
+    <motion.div
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+      className="fixed right-0 top-0 h-full w-80 bg-white shadow-lg p-4 z-50"
+    >
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Shopping Cart</h2>
+        <Button variant="ghost" onClick={() => setShowCart(false)}>
+          <X className="h-6 w-6" />
+        </Button>
+      </div>
+
+      {cartItems.length === 0 ? (
+        <div className="text-center text-gray-500 mt-8">
+          Your cart is empty
+        </div>
+      ) : (
+        <>
+          <div className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+            {cartItems.map((item) => (
+              <div key={item.id} className="flex gap-3 border-b pb-3">
+                <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded" />
+                <div className="flex-1">
+                  <h3 className="font-medium">{item.name}</h3>
+                  <p className="text-green-600 font-bold">{item.points} Points</p>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => removeFromCart(item.id)}
+                    className="mt-2"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="border-t mt-4 pt-4">
+            <div className="flex justify-between mb-4">
+              <span className="font-bold">Total Points:</span>
+              <span className="font-bold text-green-600">
+                {cartItems.reduce((sum, item) => sum + item.points, 0)}
+              </span>
+            </div>
+            <Button 
+              className="w-full bg-green-600 hover:bg-green-700"
+              onClick={() => {
+                setShowSuccessDialog(true);
+                setShowCart(false);
+              }}
+            >
+              Checkout
+            </Button>
+          </div>
+        </>
+      )}
+    </motion.div>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 p-8">
-      <motion.div 
-        className="max-w-6xl mx-auto"
-        initial="hidden"
-        animate="visible"
-        variants={fadeIn}
-      >
-        <div className="text-center mb-16">
-          <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="flex justify-center mb-6"
-          >
-            <Trophy className="h-16 w-16 text-green-600" />
-          </motion.div>
-          <motion.h1 
-            className="text-4xl font-bold text-green-800 mb-4"
-            variants={fadeIn}
-          >
-            EcoRewards Hub
-          </motion.h1>
-          <motion.p 
-            className="text-lg text-green-600"
-            variants={fadeIn}
-          >
-            Turn your sustainable actions into amazing rewards
-          </motion.p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-green-600 text-white sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Leaf className="h-8 w-8" />
+              <span className="text-2xl font-bold">EcoRewards</span>
+            </div>
+
+            <div className="flex-1 max-w-2xl flex gap-2">
+              <div className="flex-1 relative">
+                <Input 
+                  type="text"
+                  placeholder="Search rewards..."
+                  className="w-full py-2 px-4 rounded text-black"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <Search className="absolute right-3 top-2.5 text-gray-400" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Badge variant="outline" className="bg-white text-green-600 text-lg py-2">
+                {userPoints} Points
+              </Badge>
+              <Button 
+                variant="ghost" 
+                className="relative"
+                onClick={() => setShowCart(true)}
+              >
+                <ShoppingCart className="h-6 w-6" />
+                {cartItems.length > 0 && (
+                  <Badge className="absolute -top-2 -right-2 bg-red-500">
+                    {cartItems.length}
+                  </Badge>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation */}
+      <nav className="bg-green-700 text-white py-2 sticky top-16 z-30">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center gap-6 overflow-x-auto">
+            {categories.map((category) => (
+              <Button 
+                key={category} 
+                variant="ghost" 
+                className={`text-white hover:bg-green-600 ${
+                  selectedCategory === category ? 'bg-green-600' : ''
+                }`}
+                onClick={() => setSelectedCategory(category)}
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto p-4">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold">
+            {searchQuery ? `Search Results for "${searchQuery}"` : selectedCategory}
+            {filteredRewards.length > 0 && ` (${filteredRewards.length} items)`}
+          </h2>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {rewards.map((reward, index) => (
-            <motion.div
-              key={reward.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.2 }}
-            >
-              <Card className="bg-white hover:shadow-xl transition-all duration-300 border-green-200 hover:border-green-400">
-                <CardHeader>
-                  <motion.div 
-                    className="flex items-center justify-center mb-4"
-                    whileHover={{ scale: 1.1 }}
-                  >
-                    {reward.icon}
-                  </motion.div>
-                  <CardTitle className="text-2xl text-center text-green-800">{reward.name}</CardTitle>
-                  <CardDescription className="text-center text-green-600">
-                    {reward.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-700 mb-2">
-                      {reward.points} Points
-                    </div>
-                    <div className="text-sm text-green-600">
-                      {reward.stats}
-                    </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredRewards.map((reward) => (
+            <Card key={reward.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-4">
+                <div className="aspect-square mb-4 bg-gray-100 rounded-lg overflow-hidden">
+                  <img 
+                    src={reward.image} 
+                    alt={reward.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                <h3 className="font-medium text-lg mb-1 hover:text-green-600">
+                  {reward.name}
+                </h3>
+
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center text-yellow-400">
+                    <Star className="h-4 w-4 fill-current" />
+                    <span className="text-black ml-1">{reward.rating}</span>
                   </div>
-                </CardContent>
-                <CardFooter className="flex justify-center pb-6">
-                  <Button 
-                    className="bg-green-600 hover:bg-green-700 text-white px-8"
-                    onClick={() => handleClaim(reward.name)}
-                  >
-                    Claim Reward
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
+                  <span className="text-gray-500">({reward.reviews})</span>
+                </div>
+
+                <div className="mb-2">
+                  <span className="text-2xl font-bold">{reward.points}</span>
+                  <span className="text-gray-500 line-through ml-2">
+                    {reward.originalPoints}
+                  </span>
+                  <span className="text-green-600 ml-2">
+                    {Math.round((1 - reward.points/reward.originalPoints) * 100)}% off
+                  </span>
+                </div>
+
+                <div className="text-sm mb-3">
+                  <span className="text-green-600">{reward.delivery}</span>
+                </div>
+
+                <Button 
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  disabled={!reward.inStock || userPoints < reward.points}
+                  onClick={() => addToCart(reward)}
+                >
+                  {!reward.inStock ? 'Out of Stock' : 
+                   userPoints < reward.points ? 'Insufficient Points' : 
+                   'Add to Cart'}
+                </Button>
+              </CardContent>
+            </Card>
           ))}
         </div>
-      </motion.div>
+      </main>
 
+      {/* Cart Sidebar */}
+      <AnimatePresence>
+        {showCart && <CartSidebar />}
+      </AnimatePresence>
+
+      {/* Success Dialog */}
       <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <AlertDialogContent className="bg-green-50">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-green-800">Reward Claimed Successfully!</AlertDialogTitle>
-            <AlertDialogDescription className="text-green-600">
-              You've successfully claimed {selectedReward}. Thank you for contributing to a sustainable future!
+            <AlertDialogTitle>Order Confirmed!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your order has been placed successfully!
+              <br /><br />
+              Total Points Used: {cartItems.reduce((sum, item) => sum + item.points, 0)}
+              <br />
+              Estimated delivery: Within 3-5 business days
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction 
               className="bg-green-600 hover:bg-green-700"
-              onClick={() => setShowSuccessDialog(false)}
+              onClick={() => {
+                setCartItems([]);
+                setShowSuccessDialog(false);
+              }}
             >
-              Continue Making Impact
+              Continue Shopping
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
   );
-};
-
-export default Page;
+}
