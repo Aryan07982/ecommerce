@@ -1,368 +1,377 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from "@/components/ui/input";
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Leaf, Search, ShoppingCart, Star, Filter, ChevronDown, Menu, X } from 'lucide-react';
+import {
+  Leaf,
+  Star,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Heart,
+  CheckCircle,
+  Search,
+  ShoppingBag,
+  Trophy,
+  ShoppingCart
+} from 'lucide-react';
 
-export default function RewardsPage() {
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [selectedReward, setSelectedReward] = useState(null);
-  const [userPoints, setUserPoints] = useState(2000);
+interface Reward {
+  id: number;
+  name: string;
+  price: number;
+  description: string;
+  details: string;
+  image: string;
+  category: 'lamps' | 'handbags' | 'decor' | 'others';
+}
+
+const RewardsPage = () => {
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [cartItems, setCartItems] = useState([]);
+  const [activeCategory, setActiveCategory] = useState<'all' | 'lamps' | 'handbags' | 'decor' | 'others'>('all');
   const [showCart, setShowCart] = useState(false);
-  const [filteredRewards, setFilteredRewards] = useState([]);
+  const [cartItems, setCartItems] = useState<Reward[]>([]);
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  const categories = [
-    "All Categories",
-    "Electronics",
-    "Home & Kitchen",
-    "Fashion",
-    "Sports",
-    "Books",
-    "Beauty",
-  ];
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  const allRewards = [
+  const rewards: Reward[] = [
     {
       id: 1,
-      name: "Premium Wireless Earbuds",
-      points: 100,
-      originalPoints: 150,
-      description: "High-quality sound with active noise cancellation",
-      category: "Electronics",
-      rating: 4.5,
-      reviews: 128,
-      image: "https://m.media-amazon.com/images/I/713Lr2oNWaL._SX522_.jpg",
-      inStock: true,
-      delivery: "Delivery by Tomorrow"
+      name: "Recycled Denim Backpack",
+      price: 300,
+      description: "A trendy and durable backpack crafted from 100% recycled denim.",
+      details: "8 pairs of jeans repurposed",
+      image: "https://m.media-amazon.com/images/I/61eXtXoWpbL._SX679_.jpg",
+      category: 'others',
     },
     {
       id: 2,
-      name: "Smart Fitness Band",
-      points: 300,
-      originalPoints: 400,
-      description: "Track your health and fitness goals",
-      category: "Electronics",
-      rating: 4.2,
-      reviews: 256,
-      image: "https://m.media-amazon.com/images/I/51iMzWsqrBL._SX679_.jpg",
-      inStock: true,
-      delivery: "Delivery in 2 days"
+      name: "Upcycled Glass Lamp",
+      price: 250,
+      description: "An elegant and sustainable glass lamp made from reclaimed bottles.",
+      details: "5 glass bottles repurposed",
+      image: "https://m.media-amazon.com/images/I/61aqkzbiRtL._SX679_.jpg",
+      category: 'lamps',
     },
     {
       id: 3,
-      name: "Coffee Maker",
-      points: 500,
-      originalPoints: 600,
-      description: "Premium coffee machine for perfect brews",
-      category: "Home & Kitchen",
-      rating: 4.7,
-      reviews: 89,
-      image: "https://m.media-amazon.com/images/I/41Hq2E2stgL._SX300_SY300_QL70_FMwebp_.jpg",
-      inStock: true,
-      delivery: "Delivery by Tomorrow"
+      name: "Eco-Friendly Handbag",
+      price: 450,
+      description: "Stylish handbag made from sustainable materials.",
+      details: "Vegan leather, recycled materials",
+      image: "https://m.media-amazon.com/images/I/51IMN74wTRL._SX679_.jpg",
+      category: 'handbags',
     },
     {
       id: 4,
-      name: "Running Shoes",
-      points: 200,
-      originalPoints: 250,
-      description: "Professional running shoes with comfort fit",
-      category: "Sports",
-      rating: 4.3,
-      reviews: 167,
-      image: "https://m.media-amazon.com/images/I/71DHKbJfG0L._SY695_.jpg",
-      inStock: true,
-      delivery: "Delivery in 3 days"
+      name: "Recycled Metal Decor",
+      price: 200,
+      description: "Beautiful wall art made from recycled metal.",
+      details: "100% recycled materials",
+      image: "https://m.media-amazon.com/images/I/31k4TSCiC1L._SX300_SY300_QL70_FMwebp_.jpg",
+      category: 'decor',
     },
     {
       id: 5,
-      name: "Fashion Book Collection",
-      points: 150,
-      originalPoints: 200,
-      description: "Curated collection of fashion design books",
-      category: "Books",
-      rating: 4.4,
-      reviews: 342,
-      image: "https://m.media-amazon.com/images/I/51d8s6ptnXL._SX342_SY445_.jpg",
-      inStock: true,
-      delivery: "Express Delivery Available"
+      name: "Recycled Denim Jacket",
+      price: 300,
+      description: "A trendy and durable jacket crafted from 100% recycled denim.",
+      details: "8 pairs of jeans repurposed",
+      image: "https://m.media-amazon.com/images/I/814BQlJrFtL._SY879_.jpg",
+      category: 'others',
     },
     {
       id: 6,
-      name: "Skincare Set",
-      points: 180,
-      originalPoints: 220,
-      description: "Premium skincare collection",
-      category: "Beauty",
-      rating: 4.6,
-      reviews: 95,
-      image: "https://m.media-amazon.com/images/I/610BrrtNXaL._SX522_PIbundle-4,TopRight,0,0_AA522SH20_.jpg",
-      delivery: "Delivery in 2-3 days"
-    }
+      name: "Upcycled Red Glass Lamp",
+      price: 250,
+      description: "An elegant and sustainable glass lamp made from reclaimed bottles.",
+      details: "5 glass bottles repurposed",
+      image: "https://m.media-amazon.com/images/I/41RXJJlvY3L._SX300_SY300_QL70_FMwebp_.jpg",
+      category: 'lamps',
+    },
+    {
+      id: 7,
+      name: "Organic Cotton Tote Bag",
+      price: 450,
+      description: "Stylish handbag made from sustainable materials.",
+      details: "Vegan leather, recycled materials",
+      image: "https://m.media-amazon.com/images/I/41aISMfUP6L._SX300_SY300_QL70_FMwebp_.jpg",
+      category: 'handbags',
+    },
+    {
+      id: 8,
+      name: "Recycled Plastic Sunglasses",
+      price: 200,
+      description: "Sunglasses made from recycled plastic.",
+      details: "100% recycled materials",
+      image: "https://m.media-amazon.com/images/I/41hB7sS0J4L._SX679_.jpg",
+      category: 'others',
+    },
   ];
 
-  // Filter and search functionality
-  useEffect(() => {
-    let results = allRewards;
-    
-    // Apply category filter
-    if (selectedCategory !== 'All Categories') {
-      results = results.filter(reward => reward.category === selectedCategory);
-    }
-    
-    // Apply search filter
-    if (searchQuery) {
-      results = results.filter(reward => 
-        reward.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        reward.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        reward.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    
-    setFilteredRewards(results);
-  }, [selectedCategory, searchQuery]);
+  const handleClaim = useCallback((reward: Reward) => {
+    setSelectedReward(reward);
+    setShowSuccess(true);
+    setCartItems([...cartItems, reward]);
+  }, [cartItems]);
 
-  // Cart functionality
-  const addToCart = (reward) => {
-    if (userPoints >= reward.points) {
-      setCartItems([...cartItems, reward]);
-      setUserPoints(userPoints - reward.points);
-    }
+  const filteredRewards = rewards.filter(reward =>
+    (activeCategory === 'all' || reward.category === activeCategory) &&
+    reward.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const FloatingCartButton = () => (
+    <motion.button
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+      className="fixed top-4 right-4 z-50 bg-green-500 text-white p-4 rounded-full shadow-lg flex items-center gap-2"
+      onClick={() => setShowCart(true)}
+    >
+      <ShoppingCart className="h-6 w-6" />
+      {cartItems.length > 0 && (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold"
+        >
+          {cartItems.length}
+        </motion.div>
+      )}
+    </motion.button>
+  );
+
+  const RewardCard = ({ reward }: { reward: Reward }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
+    return (
+      <motion.div
+        className="group relative bg-white rounded-3xl p-6 transition-all duration-300 ease-out shadow-lg hover:shadow-2xl border border-gray-100"
+        whileHover={{ scale: 1.05, boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)' }}
+        whileTap={{ scale: 0.95 }}
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
+      >
+        <div className="relative overflow-hidden rounded-xl mb-4">
+          <motion.img
+            src={reward.image}
+            alt={reward.name}
+            className="w-full h-64 object-cover transition-transform duration-500"
+            animate={{ scale: isHovered ? 1.1 : 1 }}
+          />
+          <motion.div
+            className="absolute top-2 right-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: isHovered ? 1 : 0 }}
+          >
+            <Button
+              variant="ghost"
+              className="rounded-full bg-white/80 p-2 hover:bg-white"
+            >
+              <Heart className="h-5 w-5 text-red-500" />
+            </Button>
+          </motion.div>
+        </div>
+        <h3 className="text-xl font-bold mb-2 text-gray-800">{reward.name}</h3>
+        <p className="text-gray-600 mb-4">{reward.description}</p>
+        <div className="flex items-center gap-2 mb-2">
+          <Leaf className="h-4 w-4 text-green-500" />
+          <span className="text-sm text-gray-500">{reward.details}</span>
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <span className="text-2xl font-bold text-green-600">₹{reward.price}</span>
+          <Button
+            onClick={() => handleClaim(reward)}
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full transition-all duration-300 hover:shadow-lg flex items-center space-x-2"
+          >
+            Add to Cart
+          </Button>
+        </div>
+      </motion.div>
+    );
   };
 
-  const removeFromCart = (rewardId) => {
-    const reward = cartItems.find(item => item.id === rewardId);
-    setCartItems(cartItems.filter(item => item.id !== rewardId));
-    setUserPoints(userPoints + reward.points);
-  };
+  const CategoryButton = ({ category, label }: { category: typeof activeCategory, label: string }) => (
+    <button
+      onClick={() => setActiveCategory(category as typeof activeCategory)}
+      className={`px-6 py-3 rounded-full text-lg font-medium transition-all duration-300 ${
+        activeCategory === category
+          ? 'bg-green-500 text-white shadow-lg transform scale-105'
+          : 'bg-white text-gray-600 hover:bg-gray-200'
+      }`}
+    >
+      {label}
+    </button>
+  );
 
-  // Cart Sidebar Component
   const CartSidebar = () => (
     <motion.div
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
-      className="fixed right-0 top-0 h-full w-80 bg-white shadow-lg p-4 z-50"
+      className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl p-6 z-50"
     >
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Shopping Cart</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-green-800 flex items-center">
+          <ShoppingBag className="h-6 w-6 mr-2 text-green-800" />
+          Your Cart
+        </h2>
         <Button variant="ghost" onClick={() => setShowCart(false)}>
-          <X className="h-6 w-6" />
+          <X className="h-6 w-6 text-green-800" />
         </Button>
       </div>
 
       {cartItems.length === 0 ? (
-        <div className="text-center text-gray-500 mt-8">
-          Your cart is empty
+        <div className="flex flex-col items-center justify-center h-full gap-4">
+          <ShoppingCart className="h-16 w-16 text-gray-300" />
+          <p className="text-gray-500 text-lg">Your cart is empty</p>
         </div>
       ) : (
-        <>
-          <div className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex gap-3 border-b pb-3">
-                <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded" />
-                <div className="flex-1">
-                  <h3 className="font-medium">{item.name}</h3>
-                  <p className="text-green-600 font-bold">{item.points} Points</p>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => removeFromCart(item.id)}
-                    className="mt-2"
-                  >
-                    Remove
-                  </Button>
-                </div>
+        <div className="space-y-4">
+          {cartItems.map((item, index) => (
+            <motion.div
+              key={`${item.id}-${index}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex gap-4 p-4 bg-gray-50 rounded-xl"
+            >
+              <img src={item.image} alt={item.name} className="w-24 h-24 object-cover rounded-lg" />
+              <div className="flex-1">
+                <h3 className="font-medium text-green-800">{item.name}</h3>
+                <p className="text-green-600 font-bold">₹{item.price}</p>
+                <p className="text-sm text-gray-600">{item.description}</p>
               </div>
-            ))}
-          </div>
-          <div className="border-t mt-4 pt-4">
-            <div className="flex justify-between mb-4">
-              <span className="font-bold">Total Points:</span>
+              <Button
+                variant="ghost"
+                className="rounded-full bg-red-500 text-white p-2 hover:bg-red-600"
+                onClick={() => setCartItems(cartItems.filter((_, i) => i !== index))}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </motion.div>
+          ))}
+          <div className="border-t pt-4 mt-4">
+            <div className="flex justify-between mb-2">
+              <span className="font-bold text-green-800">Total ({cartItems.length} items)</span>
               <span className="font-bold text-green-600">
-                {cartItems.reduce((sum, item) => sum + item.points, 0)}
+                ₹{cartItems.reduce((sum, item) => sum + item.price, 0)}
               </span>
             </div>
-            <Button 
-              className="w-full bg-green-600 hover:bg-green-700"
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-full text-lg font-medium"
               onClick={() => {
-                setShowSuccessDialog(true);
+                setShowSuccess(true);
                 setShowCart(false);
               }}
             >
-              Checkout
+              Checkout Now
             </Button>
           </div>
-        </>
+        </div>
       )}
     </motion.div>
   );
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-green-600 text-white sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto p-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Leaf className="h-8 w-8" />
-              <span className="text-2xl font-bold">EcoRewards</span>
-            </div>
+      <FloatingCartButton />
 
-            <div className="flex-1 max-w-2xl flex gap-2">
-              <div className="flex-1 relative">
-                <Input 
-                  type="text"
-                  placeholder="Search rewards..."
-                  className="w-full py-2 px-4 rounded text-black"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <Search className="absolute right-3 top-2.5 text-gray-400" />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Badge variant="outline" className="bg-white text-green-600 text-lg py-2">
-                {userPoints} Points
-              </Badge>
-              <Button 
-                variant="ghost" 
-                className="relative"
-                onClick={() => setShowCart(true)}
-              >
-                <ShoppingCart className="h-6 w-6" />
-                {cartItems.length > 0 && (
-                  <Badge className="absolute -top-2 -right-2 bg-red-500">
-                    {cartItems.length}
-                  </Badge>
-                )}
-              </Button>
+      <motion.nav
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
+          isScrolled ? 'bg-white shadow-md py-4' : 'bg-transparent py-6'
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-green-600 flex items-center gap-2">
+            <Leaf className="h-6 w-6" />
+            Bin.AI
+          </h1>
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent w-64"
+              />
             </div>
           </div>
         </div>
-      </header>
+      </motion.nav>
 
-      {/* Navigation */}
-      <nav className="bg-green-700 text-white py-2 sticky top-16 z-30">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center gap-6 overflow-x-auto">
-            {categories.map((category) => (
-              <Button 
-                key={category} 
-                variant="ghost" 
-                className={`text-white hover:bg-green-600 ${
-                  selectedCategory === category ? 'bg-green-600' : ''
-                }`}
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto p-4">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">
-            {searchQuery ? `Search Results for "${searchQuery}"` : selectedCategory}
-            {filteredRewards.length > 0 && ` (${filteredRewards.length} items)`}
-          </h2>
+      <main className="max-w-7xl mx-auto px-6 pt-24 pb-20">
+        <div className="flex gap-4 mb-12 overflow-x-auto pb-4">
+          {['all', 'lamps', 'handbags', 'decor', 'others'].map((category) => (
+            <CategoryButton key={category} category={category} label={category.charAt(0).toUpperCase() + category.slice(1)} />
+          ))}
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredRewards.map((reward) => (
-            <Card key={reward.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-4">
-                <div className="aspect-square mb-4 bg-gray-100 rounded-lg overflow-hidden">
-                  <img 
-                    src={reward.image} 
-                    alt={reward.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-
-                <h3 className="font-medium text-lg mb-1 hover:text-green-600">
-                  {reward.name}
-                </h3>
-
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex items-center text-yellow-400">
-                    <Star className="h-4 w-4 fill-current" />
-                    <span className="text-black ml-1">{reward.rating}</span>
-                  </div>
-                  <span className="text-gray-500">({reward.reviews})</span>
-                </div>
-
-                <div className="mb-2">
-                  <span className="text-2xl font-bold">{reward.points}</span>
-                  <span className="text-gray-500 line-through ml-2">
-                    {reward.originalPoints}
-                  </span>
-                  <span className="text-green-600 ml-2">
-                    {Math.round((1 - reward.points/reward.originalPoints) * 100)}% off
-                  </span>
-                </div>
-
-                <div className="text-sm mb-3">
-                  <span className="text-green-600">{reward.delivery}</span>
-                </div>
-
-                <Button 
-                  className="w-full bg-green-600 hover:bg-green-700"
-                  disabled={!reward.inStock || userPoints < reward.points}
-                  onClick={() => addToCart(reward)}
-                >
-                  {!reward.inStock ? 'Out of Stock' : 
-                   userPoints < reward.points ? 'Insufficient Points' : 
-                   'Add to Cart'}
-                </Button>
-              </CardContent>
-            </Card>
+            <RewardCard key={reward.id} reward={reward} />
           ))}
         </div>
       </main>
 
-      {/* Cart Sidebar */}
       <AnimatePresence>
         {showCart && <CartSidebar />}
       </AnimatePresence>
 
-      {/* Success Dialog */}
-      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Order Confirmed!</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your order has been placed successfully!
-              <br /><br />
-              Total Points Used: {cartItems.reduce((sum, item) => sum + item.points, 0)}
-              <br />
-              Estimated delivery: Within 3-5 business days
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction 
-              className="bg-green-600 hover:bg-green-700"
-              onClick={() => {
-                setCartItems([]);
-                setShowSuccessDialog(false);
-              }}
-            >
-              Continue Shopping
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlertDialog
+        isOpen={showSuccess}
+        onClose={() => setShowSuccess(false)}
+        title={
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-6 w-6 text-green-500" />
+            Added to Cart!
+          </div>
+        }
+        message={
+          selectedReward
+            ? `${selectedReward.name} has been added to your cart.`
+            : ""
+        }
+      />
+
+      <style jsx global>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slide-up {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes bounce-in {
+          0% { transform: scale(0.3); opacity: 0; }
+          50% { transform: scale(1.05); }
+          70% { transform: scale(0.9); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-fade-in {
+          animation: fade-in 1s ease-out;
+        }
+        .animate-slide-up {
+          animation: slide-up 1s ease-out 0.3s both;
+        }
+        .animate-bounce-in {
+          animation: bounce-in 1s cubic-bezier(0.36, 0, 0.66, 1) 0.6s both;
+        }
+      `}</style>
     </div>
   );
-}
+};
+
+export default RewardsPage;
